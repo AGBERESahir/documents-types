@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documents types – lettres et attestations</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .paper { background: #fff; color: #111; border: 1px solid var(--line); padding: 2.2rem 2rem; margin-top: 2rem; font-family: Georgia, 'Times New Roman', serif; line-height: 1.6; }
+  .paper p { margin: 0 0 1rem; white-space: pre-wrap; }
+  .paper .right { text-align: right; }
+  .paper .subject { font-weight: bold; }
+  @media print {
+    body { background: #fff; }
+    .wrap > *:not(#letter) { display: none !important; }
+    .paper { border: 0; margin: 0; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Écris ta lettre en deux minutes</h1>
+  <p class="lead">Choisis un modèle, remplis les champs, puis imprime ou enregistre en PDF. Tout reste sur ton appareil : rien n’est envoyé.</p>
+
+  <form id="f" autocomplete="off">
+    <label for="type">Type de document</label>
+    <select id="type">
+      <option value="reclamation">Lettre de réclamation</option>
+      <option value="attestation">Attestation sur l’honneur</option>
+      <option value="demande">Demande administrative</option>
+    </select>
+    <div class="row">
+      <div><label for="nom">Ton nom complet</label><input id="nom" required></div>
+      <div><label for="ville">Ta ville</label><input id="ville" required></div>
+    </div>
+    <label for="adresse">Ton adresse</label><input id="adresse">
+    <label for="dest">Destinataire (organisme, service, entreprise)</label><input id="dest">
+    <label for="objet" id="objetLabel">Objet de la réclamation</label><input id="objet" required>
+    <label for="details">Détails (faits, dates, montants)</label><textarea id="details"></textarea>
+    <div id="delaiWrap"><label for="delai">Délai de réponse demandé (jours)</label><input id="delai" type="number" min="1" value="15"></div>
+    <div class="actions">
+      <button type="button" id="print">Imprimer ou enregistrer en PDF</button>
+      <button type="button" class="ghost" id="copy">Copier le texte</button>
+    </div>
+  </form>
+
+  <article class="paper" id="letter" aria-live="polite"></article>
+  <p class="note">Ces modèles sont des points de départ, pas un avis juridique. Garde une copie datée de chaque courrier envoyé.</p>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const fields = ['type','nom','ville','adresse','dest','objet','details','delai'];
+const objetLabels = { reclamation: 'Objet de la réclamation', attestation: 'Ce que tu atteste', demande: 'Ce que tu demandes' };
+
+function dateFr() { return new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }); }
+
+function build() {
+  const v = Object.fromEntries(fields.map(k => [k, $(k).value.trim()]));
+  const nom = v.nom || '[Ton nom]', ville = v.ville || '[Ville]';
+  const head = [nom, v.adresse].filter(Boolean).join('\n');
+  const dest = v.dest || '[Destinataire]';
+  const objet = v.objet || '[objet]';
+  const fin = 'Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.';
+  const lieuDate = `${ville}, le ${dateFr()}`;
+  let blocks;
+
+  if (v.type === 'attestation') {
+    blocks = [
+      ['', head], ['right', dest], ['right', lieuDate],
+      ['subject', 'Attestation sur l’honneur'],
+      ['', `Je soussigné(e) ${nom}${v.adresse ? ', demeurant ' + v.adresse : ''}, atteste sur l’honneur que ${objet}.${v.details ? '\n\n' + v.details : ''}`],
+      ['', 'Cette attestation est établie pour servir et valoir ce que de droit. Je suis informé(e) que toute fausse déclaration m’expose à des sanctions.'],
+      ['right', `Fait à ${ville}, le ${dateFr()}\n\nSignature :`]
+    ];
+  } else if (v.type === 'demande') {
+    blocks = [
+      ['', head], ['right', dest], ['right', lieuDate],
+      ['subject', `Objet : demande de ${objet}`],
+      ['', 'Madame, Monsieur,'],
+      ['', `Je me permets de solliciter ${objet}.${v.details ? '\n\n' + v.details : ''}`],
+      ['', `Je reste à votre disposition pour tout justificatif complémentaire et vous remercie de bien vouloir me répondre sous ${v.delai || 15} jours.`],
+      ['', fin], ['right', nom]
+    ];
+  } else {
+    blocks = [
+      ['', head], ['right', dest], ['right', lieuDate],
+      ['subject', `Objet : réclamation – ${objet}`],
+      ['', 'Madame, Monsieur,'],
+      ['', `Je vous écris au sujet de la situation suivante : ${objet}.${v.details ? '\n\n' + v.details : ''}`],
+      ['', `Je vous demande de bien vouloir examiner ma demande et de me répondre sous ${v.delai || 15} jours. À défaut, je me réserve le droit de saisir les organismes compétents.`],
+      ['', fin], ['right', nom]
+    ];
+  }
+  return blocks;
+}
+
+function render() {
+  $('objetLabel').textContent = objetLabels[$('type').value];
+  $('delaiWrap').hidden = $('type').value === 'attestation';
+  const letter = $('letter');
+  letter.replaceChildren(...build().map(([cls, text]) => {
+    const p = document.createElement('p');
+    if (cls) p.className = cls;
+    p.textContent = text;
+    return p;
+  }));
+}
+
+fields.forEach(k => $(k).addEventListener('input', render));
+$('print').addEventListener('click', () => window.print());
+$('copy').addEventListener('click', async () => {
+  const text = build().map(b => b[1]).join('\n\n');
+  try { await navigator.clipboard.writeText(text); $('copy').textContent = 'Texte copié'; }
+  catch { $('copy').textContent = 'Copie impossible : sélectionne le texte à la main'; }
+  setTimeout(() => $('copy').textContent = 'Copier le texte', 2500);
+});
+render();
+</script>
+</body>
+</html>
