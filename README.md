@@ -1,22 +1,27 @@
 # documents-types
 
-Rédige en deux minutes une **lettre de réclamation**, une **attestation sur l'honneur** ou une **demande administrative**, puis enregistre-la en PDF ou imprime-la.
+Rédige en deux minutes une **lettre de réclamation**, une **résiliation**, une **demande de congé**, une **attestation** ou une **demande administrative**, puis enregistre-la en PDF ou imprime-la.
 
 **Démo : https://agberesahir.github.io/documents-types/**
 
 - Un seul fichier HTML, aucune installation, aucun compte.
-- **Rien n'est envoyé ni enregistré** : le texte se construit dans ton navigateur et disparaît quand tu fermes la page.
+- **Rien n'est envoyé** : le texte se construit dans ton navigateur. Rien n'est enregistré non plus, sauf si tu cases toi-même « Mémoriser mes coordonnées » (voir plus bas).
 - Mode sombre pour l'écran, mise en page papier propre à l'impression.
 
-## Les trois modèles
+## Les six modèles
 
-| Modèle | Pour quoi faire | Champ « objet » | Délai de réponse |
+| Modèle | Pour quoi faire | Champ « objet » | Champs propres au modèle |
 |---|---|---|---|
-| Lettre de réclamation | Contester une facture, un service non rendu, un retard | *Objet de la réclamation* | Oui (15 jours par défaut) |
-| Attestation sur l'honneur | Déclarer sur l'honneur un fait (hébergement, situation, etc.) | *Ce que tu atteste* | Non |
-| Demande administrative | Demander un document, un rendez-vous, un remboursement | *Ce que tu demandes* | Oui (15 jours par défaut) |
+| Lettre de réclamation | Contester une facture, un service non rendu, un retard | *Objet de la réclamation* | Référence, délai de réponse (15 jours par défaut), recommandé |
+| Demande administrative | Demander un document, un rendez-vous, un remboursement | *Ce que tu demandes* | Référence, délai de réponse, recommandé |
+| Résiliation d'un contrat ou d'un abonnement | Mettre fin à un abonnement internet, une assurance, une salle de sport… | *Ce que tu résilies* | Référence, date d'effet souhaitée, recommandé |
+| Demande de congé | Demander des congés à ton employeur | *Type de congé* (annuel, sans solde…) | Premier et dernier jour d'absence |
+| Attestation sur l'honneur | Déclarer sur l'honneur un fait | *Ce que tu attestes* | Destinataire facultatif |
+| Attestation d'hébergement | Attester que tu héberges quelqu'un | *Nom de la personne hébergée* | Date de début d'hébergement, destinataire facultatif |
 
-Chaque lettre contient automatiquement l'expéditeur, le destinataire, le lieu et la date du jour, l'objet, la formule de politesse et la signature. Les champs vides sont remplacés par des repères entre crochets (`[Ton nom]`, `[Ville]`, `[Destinataire]`) pour que tu voies ce qu'il reste à compléter.
+Chaque lettre contient automatiquement l'expéditeur, le destinataire, le lieu et la date, l'objet, la formule de politesse et la signature. Les champs vides sont remplacés par des repères entre crochets (`[Ton nom]`, `[Ville]`, `[Destinataire]`) pour que tu voies ce qu'il reste à compléter. Les champs inutiles pour le modèle choisi sont masqués.
+
+**Recommandé avec accusé de réception** : pour les réclamations, demandes et résiliations, la case ajoute la mention en haut de la lettre. C'est ce mode d'envoi qui te donne une preuve de la date de réception.
 
 ## Comment l'utiliser
 
@@ -25,6 +30,7 @@ Chaque lettre contient automatiquement l'expéditeur, le destinataire, le lieu e
 3. L'aperçu de la lettre se met à jour à chaque frappe.
 4. Clique sur **Imprimer ou enregistrer en PDF**, puis choisis « Enregistrer au format PDF » comme imprimante. Seule la lettre est imprimée, sans le formulaire.
 5. Ou clique sur **Copier le texte** pour le coller dans un e-mail ou un traitement de texte.
+6. **Tout effacer** vide le formulaire et la mémoire de l'appareil.
 
 ### Exemple de rendu (demande administrative)
 
@@ -56,9 +62,16 @@ Dans cet exemple, le champ « Ce que tu demandes » contient `la copie intégral
 - **Ce sont des points de départ, pas un avis juridique.** Adapte le texte à ta situation. Pour un litige important, fais relire la lettre.
 - Les modèles sont écrits en **français** et suivent les usages d'un courrier formel. Les formules de politesse sont figées.
 - La phrase de la réclamation « je me réserve le droit de saisir les organismes compétents » est générique : retire-la ou précise-la selon ton cas.
-- **Rien n'est sauvegardé.** Si tu recharges la page, les champs sont vides. Copie ou exporte avant de fermer.
+- **Le contenu de la lettre n'est jamais sauvegardé.** Si tu recharges la page, l'objet, les détails et les dates sont vides : copie ou exporte avant de fermer.
 - Pas de pièces jointes, de signature manuscrite ni de numéro de recommandé : ajoute-les toi-même.
 - Garde une **copie datée** de chaque courrier envoyé, et préfère un envoi avec accusé de réception pour une réclamation.
+
+## Tes données
+
+- Par défaut, **rien n'est enregistré**.
+- Si tu coches **« Mémoriser mon nom, ma ville et mon adresse sur cet appareil »**, ces trois champs (et seulement eux) sont gardés dans ton navigateur (`localStorage`) pour la prochaine visite. **Évite cette option sur un ordinateur partagé** (cybercafé, ordinateur de bureau commun).
+- « Tout effacer » supprime cette mémoire. Décocher la case aussi.
+- Aucune donnée n'est envoyée à un serveur.
 
 ## Utiliser en local
 
