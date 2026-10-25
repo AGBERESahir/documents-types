@@ -10,6 +10,10 @@
   .paper p { margin: 0 0 1rem; white-space: pre-wrap; }
   .paper .right { text-align: right; }
   .paper .subject { font-weight: bold; }
+  [hidden] { display: none !important; }
+  label.check { display: flex; gap: .6rem; align-items: flex-start; font-weight: 400; }
+  label.check input { width: auto; margin-top: .35rem; }
+  .meta { color: var(--muted); font-size: .9rem; font-weight: 400; }
   @media print {
     body { background: #fff; }
     .wrap > *:not(#letter) { display: none !important; }
@@ -24,23 +28,30 @@
 
   <form id="f" autocomplete="off">
     <label for="type">Type de document</label>
-    <select id="type">
-      <option value="reclamation">Lettre de réclamation</option>
-      <option value="attestation">Attestation sur l’honneur</option>
-      <option value="demande">Demande administrative</option>
-    </select>
+    <select id="type"></select>
     <div class="row">
       <div><label for="nom">Ton nom complet</label><input id="nom" required></div>
       <div><label for="ville">Ta ville</label><input id="ville" required></div>
     </div>
     <label for="adresse">Ton adresse</label><input id="adresse">
+    <label class="check"><input type="checkbox" id="souvenir"> Mémoriser mon nom, ma ville et mon adresse sur cet appareil <span class="meta">(à éviter sur un ordinateur partagé)</span></label>
     <label for="dest">Destinataire (organisme, service, entreprise)</label><input id="dest">
-    <label for="objet" id="objetLabel">Objet de la réclamation</label><input id="objet" required>
+    <div id="refWrap"><label for="ref">Référence (n° de contrat, de dossier, de client) <span class="meta">facultatif</span></label><input id="ref"></div>
+    <label for="objet" id="objetLabel">Objet</label><input id="objet" required>
+    <div class="row">
+      <div id="d1Wrap"><label for="d1" id="d1Label">Date</label><input id="d1" type="date"></div>
+      <div id="d2Wrap"><label for="d2" id="d2Label">Date</label><input id="d2" type="date"></div>
+    </div>
     <label for="details">Détails (faits, dates, montants)</label><textarea id="details"></textarea>
-    <div id="delaiWrap"><label for="delai">Délai de réponse demandé (jours)</label><input id="delai" type="number" min="1" value="15"></div>
+    <div class="row">
+      <div id="delaiWrap"><label for="delai">Délai de réponse demandé (jours)</label><input id="delai" type="number" min="1" value="15"></div>
+      <div><label for="dateLettre">Date du courrier <span class="meta">(aujourd’hui si vide)</span></label><input id="dateLettre" type="date"></div>
+    </div>
+    <label class="check" id="recoWrap"><input type="checkbox" id="recommande"> Je l’enverrai en recommandé avec accusé de réception</label>
     <div class="actions">
       <button type="button" id="print">Imprimer ou enregistrer en PDF</button>
       <button type="button" class="ghost" id="copy">Copier le texte</button>
+      <button type="button" class="danger" id="clear">Tout effacer</button>
     </div>
   </form>
 
@@ -49,54 +60,69 @@
 </div>
 <script>
 const $ = id => document.getElementById(id);
-const fields = ['type','nom','ville','adresse','dest','objet','details','delai'];
-const objetLabels = { reclamation: 'Objet de la réclamation', attestation: 'Ce que tu atteste', demande: 'Ce que tu demandes' };
+const TYPES = {
+  reclamation: { label: 'Lettre de réclamation', objet: 'Objet de la réclamation', delai: true, ref: true, reco: true },
+  demande: { label: 'Demande administrative', objet: 'Ce que tu demandes', delai: true, ref: true, reco: true },
+  resiliation: { label: 'Résiliation d’un contrat ou d’un abonnement', objet: 'Ce que tu résilies (abonnement, contrat…)', ref: true, reco: true, d1: 'Date d’effet souhaitée' },
+  conge: { label: 'Demande de congé', objet: 'Type de congé (annuel, sans solde…)', d1: 'Premier jour d’absence', d2: 'Dernier jour d’absence' },
+  attestation: { label: 'Attestation sur l’honneur', objet: 'Ce que tu attestes', attest: true },
+  hebergement: { label: 'Attestation d’hébergement', objet: 'Nom de la personne hébergée', d1: 'Hébergée chez toi depuis le', attest: true },
+};
+for (const [k, t] of Object.entries(TYPES)) $('type').add(new Option(t.label, k));
 
-function dateFr() { return new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }); }
+const champs = ['type', 'nom', 'ville', 'adresse', 'dest', 'ref', 'objet', 'details', 'delai', 'd1', 'd2', 'dateLettre'];
+const val = k => $(k).value.trim();
+const date = iso => (iso ? new Date(iso + 'T00:00:00') : new Date()).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
 function build() {
-  const v = Object.fromEntries(fields.map(k => [k, $(k).value.trim()]));
-  const nom = v.nom || '[Ton nom]', ville = v.ville || '[Ville]';
-  const head = [nom, v.adresse].filter(Boolean).join('\n');
-  const dest = v.dest || '[Destinataire]';
-  const objet = v.objet || '[objet]';
+  const v = Object.fromEntries(champs.map(k => [k, val(k)]));
+  const T = TYPES[v.type];
+  const nom = v.nom || '[Ton nom]', ville = v.ville || '[Ville]', objet = v.objet || '[objet]';
+  const lieuDate = `${ville}, le ${date(v.dateLettre)}`;
+  const suite = v.details ? '\n\n' + v.details : '';
+  const ref = v.ref ? ` (réf. ${v.ref})` : '';
+  const delai = `${v.delai || 15} jours`;
   const fin = 'Je vous prie d’agréer, Madame, Monsieur, l’expression de mes salutations distinguées.';
-  const lieuDate = `${ville}, le ${dateFr()}`;
-  let blocks;
+  const salut = ['', 'Madame, Monsieur,'];
 
-  if (v.type === 'attestation') {
-    blocks = [
-      ['', head], ['right', dest], ['right', lieuDate],
-      ['subject', 'Attestation sur l’honneur'],
-      ['', `Je soussigné(e) ${nom}${v.adresse ? ', demeurant ' + v.adresse : ''}, atteste sur l’honneur que ${objet}.${v.details ? '\n\n' + v.details : ''}`],
+  const entete = [['', [nom, v.adresse].filter(Boolean).join('\n')]];
+  if (T.reco && $('recommande').checked) entete.push(['right', 'Lettre recommandée avec accusé de réception']);
+  if (!T.attest || v.dest) entete.push(['right', v.dest || '[Destinataire]']);
+  entete.push(['right', lieuDate]);
+
+  const corps = {
+    reclamation: [['subject', `Objet : réclamation – ${objet}${ref}`], salut,
+      ['', `Je vous écris au sujet de la situation suivante : ${objet}.${suite}`],
+      ['', `Je vous demande de bien vouloir examiner ma demande et de me répondre sous ${delai}. À défaut, je me réserve le droit de saisir les organismes compétents.`], ['', fin], ['right', nom]],
+    demande: [['subject', `Objet : demande de ${objet}${ref}`], salut,
+      ['', `Je me permets de solliciter ${objet}.${suite}`],
+      ['', `Je reste à votre disposition pour tout justificatif complémentaire et vous remercie de bien vouloir me répondre sous ${delai}.`], ['', fin], ['right', nom]],
+    resiliation: [['subject', `Objet : résiliation de ${objet}${ref}`], salut,
+      ['', `Par la présente, je vous informe de ma décision de résilier ${objet}${v.ref ? `, référencé ${v.ref}` : ''}${v.d1 ? `, avec effet au ${date(v.d1)}` : ', dans les meilleurs délais'}.${suite}`],
+      ['', 'Je vous remercie de bien vouloir me confirmer par écrit la prise en compte de cette résiliation et sa date de fin effective, ainsi que les éventuelles sommes restant dues.'], ['', fin], ['right', nom]],
+    conge: [['subject', `Objet : demande de congé${v.d1 && v.d2 ? ` du ${date(v.d1)} au ${date(v.d2)}` : ''}`], salut,
+      ['', `Je vous prie de bien vouloir m’accorder un congé ${v.objet || '[type de congé]'}${v.d1 ? ` à compter du ${date(v.d1)}` : ''}${v.d2 ? `, jusqu’au ${date(v.d2)} inclus` : ''}.${suite}`],
+      ['', 'Je reste disponible pour organiser la continuité de mon travail avant mon départ et vous remercie de votre réponse.'], ['', fin], ['right', nom]],
+    attestation: [['subject', 'Attestation sur l’honneur'],
+      ['', `Je soussigné(e) ${nom}${v.adresse ? ', demeurant ' + v.adresse : ''}, atteste sur l’honneur que ${objet}.${suite}`],
       ['', 'Cette attestation est établie pour servir et valoir ce que de droit. Je suis informé(e) que toute fausse déclaration m’expose à des sanctions.'],
-      ['right', `Fait à ${ville}, le ${dateFr()}\n\nSignature :`]
-    ];
-  } else if (v.type === 'demande') {
-    blocks = [
-      ['', head], ['right', dest], ['right', lieuDate],
-      ['subject', `Objet : demande de ${objet}`],
-      ['', 'Madame, Monsieur,'],
-      ['', `Je me permets de solliciter ${objet}.${v.details ? '\n\n' + v.details : ''}`],
-      ['', `Je reste à votre disposition pour tout justificatif complémentaire et vous remercie de bien vouloir me répondre sous ${v.delai || 15} jours.`],
-      ['', fin], ['right', nom]
-    ];
-  } else {
-    blocks = [
-      ['', head], ['right', dest], ['right', lieuDate],
-      ['subject', `Objet : réclamation – ${objet}`],
-      ['', 'Madame, Monsieur,'],
-      ['', `Je vous écris au sujet de la situation suivante : ${objet}.${v.details ? '\n\n' + v.details : ''}`],
-      ['', `Je vous demande de bien vouloir examiner ma demande et de me répondre sous ${v.delai || 15} jours. À défaut, je me réserve le droit de saisir les organismes compétents.`],
-      ['', fin], ['right', nom]
-    ];
-  }
-  return blocks;
+      ['right', `Fait à ${ville}, le ${date(v.dateLettre)}\n\nSignature :`]],
+    hebergement: [['subject', 'Attestation d’hébergement'],
+      ['', `Je soussigné(e) ${nom}, demeurant ${v.adresse || '[ton adresse]'}, atteste sur l’honneur héberger à mon domicile ${objet}${v.d1 ? `, depuis le ${date(v.d1)}` : ''}.${suite}`],
+      ['', 'Cette attestation est établie pour servir et valoir ce que de droit. Je suis informé(e) que toute fausse déclaration m’expose à des sanctions.'],
+      ['right', `Fait à ${ville}, le ${date(v.dateLettre)}\n\nSignature :`]],
+  }[v.type];
+  return [...entete, ...corps];
+}
+
+function majChamps() {
+  const T = TYPES[$('type').value];
+  $('objetLabel').textContent = T.objet;
+  $('refWrap').hidden = !T.ref; $('delaiWrap').hidden = !T.delai; $('recoWrap').hidden = !T.reco;
+  for (const k of ['d1', 'd2']) { $(k + 'Wrap').hidden = !T[k]; if (T[k]) $(k + 'Label').textContent = T[k]; }
 }
 
 function render() {
-  $('objetLabel').textContent = objetLabels[$('type').value];
-  $('delaiWrap').hidden = $('type').value === 'attestation';
   const letter = $('letter');
   letter.replaceChildren(...build().map(([cls, text]) => {
     const p = document.createElement('p');
@@ -106,15 +132,31 @@ function render() {
   }));
 }
 
-fields.forEach(k => $(k).addEventListener('input', render));
+// Mémorisation facultative des coordonnées : désactivée par défaut, jamais le contenu de la lettre.
+const CLE = 'documents-types-coordonnees';
+function souvenir() {
+  try {
+    if ($('souvenir').checked) localStorage.setItem(CLE, JSON.stringify({ nom: val('nom'), ville: val('ville'), adresse: val('adresse') }));
+    else localStorage.removeItem(CLE);
+  } catch {}
+}
+try {
+  const o = JSON.parse(localStorage.getItem(CLE));
+  if (o && typeof o === 'object') { for (const k of ['nom', 'ville', 'adresse']) if (typeof o[k] === 'string') $(k).value = o[k].slice(0, 200); $('souvenir').checked = true; }
+} catch {}
+
+champs.forEach(k => $(k).addEventListener('input', () => { if (k === 'type') majChamps(); if (['nom', 'ville', 'adresse'].includes(k)) souvenir(); render(); }));
+$('recommande').addEventListener('change', render);
+$('souvenir').addEventListener('change', souvenir);
 $('print').addEventListener('click', () => window.print());
+$('clear').addEventListener('click', () => { $('f').reset(); try { localStorage.removeItem(CLE); } catch {} majChamps(); render(); });
 $('copy').addEventListener('click', async () => {
   const text = build().map(b => b[1]).join('\n\n');
   try { await navigator.clipboard.writeText(text); $('copy').textContent = 'Texte copié'; }
   catch { $('copy').textContent = 'Copie impossible : sélectionne le texte à la main'; }
   setTimeout(() => $('copy').textContent = 'Copier le texte', 2500);
 });
-render();
+majChamps(); render();
 </script>
 </body>
 </html>
